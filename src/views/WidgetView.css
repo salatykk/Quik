@@ -1,0 +1,128 @@
+.widget-window {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  padding: 5px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.widget-window:active {
+  cursor: grabbing;
+}
+
+.w-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--widget-font);
+  color: var(--text);
+  transition: border-color 0.2s ease;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.widget-window:hover .w-card {
+  border-color: var(--accent-border);
+}
+
+.widget-menu-btn {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+  z-index: 30;
+}
+
+.widget-window:hover .widget-menu-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.widget-menu-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.widget-resize-handle {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 4px;
+  color: var(--text-3);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.16s ease, color 0.16s ease;
+  z-index: 30;
+}
+
+.widget-window:hover .widget-resize-handle {
+  opacity: 1;
+}
+
+.widget-resize-handle:hover {
+  color: var(--accent);
+}
+
+.widget-menu {
+  position: absolute;
+  z-index: 60;
+  min-width: 160px;
+  padding: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: popIn 0.16s var(--ease) both;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.widget-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-align: left;
+  transition: all var(--motion);
+}
+
+.widget-menu-item:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.widget-menu-ic {
+  display: inline-flex;
+  color: var(--text-3);
+}
+
+.widget-menu-item:hover .widget-menu-ic {
+  color: var(--accent);
+}

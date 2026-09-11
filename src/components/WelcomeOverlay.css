@@ -1,0 +1,87 @@
+.wo {
+  position: absolute;
+  inset: 6px;
+  z-index: 50;
+  border-radius: var(--radius);
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  pointer-events: all;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.wo.enter {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+.wo.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.wo.exit {
+  opacity: 0;
+  transform: scale(1.04);
+}
+
+.wo-logo {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 0 30px var(--accent-soft), 0 0 60px var(--accent-soft);
+  animation: woFloat 2.6s ease-in-out infinite;
+}
+
+@keyframes woFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.wo-glow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+  transform: scale(10);
+  animation: woGlow 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes woGlow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+}
+
+.wo-title {
+  font-family: var(--widget-font);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  animation: woRise 0.6s ease-out both 0.25s;
+}
+
+.wo-sub {
+  font-family: var(--widget-font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  animation: woRise 0.6s ease-out both 0.45s;
+}
+
+@keyframes woRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

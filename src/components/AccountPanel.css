@@ -1,0 +1,138 @@
+.acc {
+  width: 330px;
+  padding: 18px;
+  gap: 6px;
+}
+
+.acc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+
+.acc-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.acc-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 2px;
+}
+
+.acc-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--accent-soft);
+  border: 2px solid var(--accent-border);
+  box-shadow: 0 0 0 5px var(--accent-soft);
+}
+
+.acc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.acc-photo-initials {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.acc-photo-pick {
+  cursor: pointer;
+  border-style: dashed;
+  background: var(--field-bg);
+  border-color: var(--line-strong);
+  transition: all var(--motion);
+}
+
+.acc-photo-pick:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px var(--accent-soft);
+}
+
+.acc-photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-3);
+}
+
+.acc-photo-empty span {
+  font-size: 9px;
+}
+
+.acc-name {
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.acc-meta {
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: var(--field-bg);
+  border: 1px solid var(--line);
+}
+
+.acc-meta-soft {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.acc-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin: 6px 0 2px;
+}
+
+.acc-logout {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.acc-field {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.acc-field .ic {
+  color: var(--text-3);
+}
+
+.acc-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.acc-note {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+}

@@ -1,0 +1,117 @@
+.w-weather {
+  gap: 10px;
+}
+
+.w-w-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.w-w-icon {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+}
+
+.w-w-icon svg {
+  stroke: var(--accent);
+  fill: none;
+}
+
+.w-w-icon[data-icon='sunny'] svg {
+  fill: var(--accent-soft);
+}
+
+.w-w-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.w-w-temp {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.w-w-cond {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.w-w-city {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.w-w-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.w-w-stat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.w-w-stat svg {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.w-w-stat span {
+  font-variant-numeric: tabular-nums;
+}
+
+.w-w-feels {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.w-w-cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.w-w-city-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+}
+
+.w-w-city-name {
+  color: var(--muted);
+}
+
+.w-w-city-temp {
+  color: var(--accent);
+  font-weight: 600;
+}
