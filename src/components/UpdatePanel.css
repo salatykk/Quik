@@ -1,0 +1,139 @@
+.upd-card {
+  width: min(440px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.55);
+  padding: 20px;
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+}
+
+.upd-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.upd-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #04120c;
+  flex: none;
+}
+
+.upd-title {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.upd-badge {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #04120c;
+}
+
+.upd-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 12px 14px;
+  margin-top: 4px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text-2);
+}
+
+.upd-note-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.upd-notes a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.upd-notes a:hover {
+  text-decoration: underline;
+}
+
+.upd-text {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 4px 0 16px;
+  line-height: 1.5;
+}
+
+.upd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.upd-checking {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 0 8px;
+}
+
+.upd-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+
+.upd-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.upd-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.18s ease;
+}
+
+.upd-percent {
+  text-align: right;
+  font-size: 11.5px;
+  font-family: var(--font-display);
+  color: var(--text-2);
+  margin-top: 7px;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

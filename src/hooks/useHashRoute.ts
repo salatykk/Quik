@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { WidgetType } from '../types'
 
 export interface Route {
-  view: 'overlay' | 'widget'
-  widgetType?: WidgetType
+  view: 'overlay' | 'widget' | 'wallpaper'
+  widgetType?: string
 }
 
 function parseRoute(): Route {
@@ -11,8 +10,11 @@ function parseRoute(): Route {
   if (hash.startsWith('overlay')) {
     return { view: 'overlay' }
   }
+  if (hash.startsWith('wallpaper')) {
+    return { view: 'wallpaper' }
+  }
   if (hash.startsWith('widget/')) {
-    const type = hash.split('/')[1] as WidgetType
+    const type = hash.split('/')[1]
     return { view: 'widget', widgetType: type }
   }
   return { view: 'widget', widgetType: 'clock' }

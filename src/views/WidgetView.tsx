@@ -6,20 +6,24 @@ import WeatherContent from '../components/widgets/WeatherContent'
 import CryptoContent from '../components/widgets/CryptoContent'
 import MusicContent from '../components/widgets/MusicContent'
 import MapsContent from '../components/widgets/MapsContent'
+import CustomWidgetContent from '../components/widgets/CustomWidgetContent'
+import BackgroundLayer from '../components/BackgroundLayer'
+import { isVideoPath } from '../components/BackgroundLayer'
 import WelcomeOverlay from '../components/WelcomeOverlay'
 import { themeVars } from '../themeVars'
 import './WidgetView.css'
 
-const CONTENT: Record<WidgetType, React.ComponentType> = {
+const CONTENT: Record<WidgetType, React.ComponentType | undefined> = {
   clock: ClockContent,
   weather: WeatherContent,
   crypto: CryptoContent,
   music: MusicContent,
-  maps: MapsContent
+  maps: MapsContent,
+  custom: undefined
 }
 
 interface Props {
-  type: WidgetType
+  type: string
 }
 
 interface MenuState {
@@ -31,9 +35,10 @@ export default function WidgetWindow({ type }: Props) {
   const { settings, dispatch } = useStore()
   const [welcomeDone, setWelcomeDone] = useState(false)
   const [menu, setMenu] = useState<MenuState | null>(null)
-  const config = settings.widgets.find(w => w.type === type)
+  const config = settings.widgets.find(w => w.id === type)
   const theme = settings.theme
-  const Content = CONTENT[type]
+  const isCustom = config?.type === 'custom' && !!config.custom
+  const Content = isCustom ? undefined : CONTENT[config?.type as WidgetType]
 
   const gesture = useRef<{ mode: 'drag' | 'resize' | null }>({ mode: null })
   const menuRef = useRef<HTMLDivElement>(null)
@@ -72,7 +77,11 @@ export default function WidgetWindow({ type }: Props) {
 
   const showWelcome = type === 'clock' && settings.isFirstLaunch && !welcomeDone
 
-  if (!config || !Content) return null
+  if (!config) return null
+
+  const hasBg = !!config.background && config.background.type !== 'none'
+  const bgIsMedia = hasBg && !!config.background?.value
+  const bgIsVideo = hasBg && bgIsMedia && (config.background?.type === 'video' || isVideoPath(config.background!.value || ''))
 
   const vars = themeVars(theme, config)
 
@@ -152,14 +161,25 @@ export default function WidgetWindow({ type }: Props) {
     }
   ]
 
+  const renderContent = () => {
+    if (isCustom && config.custom) {
+      return <CustomWidgetContent spec={config.custom} />
+    }
+    if (Content) {
+      const C = Content as React.ComponentType
+      return <C />
+    }
+    return null
+  }
+
   return (
     <div
       ref={menuRef}
-      className="widget-window"
+      className={`widget-window ${isCustom ? 'is-custom' : ''}`}
       style={{
         ...vars,
         opacity: config.opacity,
-        zoom: settings.widgetScale * 100 + '%',
+        zoom: isCustom ? '100%' : settings.widgetScale * 100 + '%',
         ...(config.font ? { ['--widget-font' as string]: config.font } : {})
       }}
       onPointerDown={startDrag}
@@ -168,8 +188,14 @@ export default function WidgetWindow({ type }: Props) {
       onPointerCancel={endDrag}
       onContextMenu={openMenu}
     >
-      <div className="card w-card">
-        <Content />
+      <div className={`card w-card ${hasBg ? 'has-bg' : ''}`}>
+        {hasBg && config.background && (
+          <>
+            <BackgroundLayer bg={config.background} className="w-card-bg" />
+            <div className="w-card-dim" />
+          </>
+        )}
+        <div className="w-card-content">{renderContent()}</div>
       </div>
 
       {showWelcome && <WelcomeOverlay onDone={() => { setWelcomeDone(true); dispatch({ type: 'SET_FIRST_LAUNCH_DONE' }) }} />}

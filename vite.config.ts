@@ -17,7 +17,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron', 'fs', 'path', 'child_process', 'koffi']
+              external: ['electron', 'fs', 'path', 'child_process', 'koffi', 'https']
             }
           }
         }

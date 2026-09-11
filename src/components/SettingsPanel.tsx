@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useStore, presetThemes } from '../store'
-import { Theme, CryptoCoin } from '../types'
+import { CustomWidgetSpec, CustomModuleId } from '../types'
+import BackgroundPicker from './BackgroundPicker'
 import './SettingsPanel.css'
 
 interface Props {
   onClose: () => void
 }
 
-type Tab = 'look' | 'widgets' | 'cities' | 'general' | 'about'
+type Tab = 'look' | 'bg' | 'widgets' | 'custom' | 'cities' | 'general' | 'about'
 
 const WIDGET_NAME: Record<string, string> = {
   clock: 'Часы',
@@ -19,10 +20,27 @@ const WIDGET_NAME: Record<string, string> = {
 
 const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'look', label: 'Внешний вид', icon: <PaletteIcon /> },
+  { id: 'bg', label: 'Фоны', icon: <ImageIcon /> },
   { id: 'widgets', label: 'Виджеты', icon: <GridIcon /> },
+  { id: 'custom', label: 'Свои виджеты', icon: <WandIcon /> },
   { id: 'cities', label: 'Города', icon: <PinIcon /> },
   { id: 'general', label: 'Общие', icon: <GearIcon /> },
   { id: 'about', label: 'О Quik', icon: <InfoIcon /> }
+]
+
+const MODULE_OPTIONS: { id: CustomModuleId; label: string }[] = [
+  { id: 'clock', label: 'Часы' },
+  { id: 'weather', label: 'Погода' },
+  { id: 'crypto', label: 'Крипта' },
+  { id: 'music', label: 'Музыка' },
+  { id: 'maps', label: 'Карты' }
+]
+
+const SIZE_PRESETS: { id: string; label: string; size: { width: number; height: number } }[] = [
+  { id: 'small', label: 'Малый', size: { width: 240, height: 180 } },
+  { id: 'medium', label: 'Средний', size: { width: 320, height: 260 } },
+  { id: 'large', label: 'Большой', size: { width: 400, height: 340 } },
+  { id: 'custom', label: 'Свой', size: { width: 0, height: 0 } }
 ]
 
 export default function SettingsPanel({ onClose }: Props) {
@@ -53,7 +71,9 @@ export default function SettingsPanel({ onClose }: Props) {
 
         <div className="set-content">
           {tab === 'look' && <LookTab />}
+          {tab === 'bg' && <BgTab />}
           {tab === 'widgets' && <WidgetsTab />}
+          {tab === 'custom' && <CustomTab />}
           {tab === 'cities' && <CitiesTab />}
           {tab === 'general' && <GeneralTab />}
           {tab === 'about' && <AboutTab />}
@@ -117,6 +137,205 @@ function LookTab() {
   )
 }
 
+function BgTab() {
+  const { settings, dispatch } = useStore()
+
+  const setWallpaper = (bg: any) => dispatch({ type: 'SET_WALLPAPER', payload: bg })
+
+  const setWidgetBg = (id: string, bg: any) =>
+    dispatch({ type: 'UPDATE_WIDGET', payload: { id, changes: { background: bg.type === 'none' ? undefined : bg } } })
+
+  const isN = (v: any) => !v || v.type === 'none'
+
+  return (
+    <div className="tab-scroll">
+      <h3 className="sec-title">Обои рабочего стола</h3>
+      <p className="sec-sub">Анимированный фон позади всех виджетов. Поддерживаются видео и GIF.</p>
+      <div className="bg-card">
+        <BackgroundPicker value={settings.wallpaper} onChange={setWallpaper} />
+      </div>
+
+      <h3 className="sec-title">Фон каждого виджета</h3>
+      <p className="sec-sub">Свой фон для отдельного виджета (видео, картинка или цвет).</p>
+      <div className="wbg-list">
+        {settings.widgets.map(w => (
+          <div key={w.id} className="wbg-item">
+            <div className="wbg-item-head">
+              <span className="wbg-item-name">{w.type === 'custom' && w.custom ? w.custom.title : WIDGET_NAME[w.type] || w.type}</span>
+              {!isN(w.background) && <span className="wbg-item-badge">есть фон</span>}
+            </div>
+            <BackgroundPicker value={w.background} onChange={bg => setWidgetBg(w.id, bg)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CustomTab() {
+  const { settings, dispatch } = useStore()
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<CustomWidgetSpec>({ title: '', text: '', modules: ['clock'], size: { width: 320, height: 260 } })
+
+  const customWidgets = settings.widgets.filter((w): w is typeof w & { custom: CustomWidgetSpec } => w.type === 'custom' && !!w.custom)
+
+  const startNew = () => {
+    setEditingId('__new__')
+    setForm({ title: '', text: '', modules: ['clock'], size: { width: 320, height: 260 } })
+  }
+
+  const startEdit = (w: any) => {
+    setEditingId(w.id)
+    setForm({ title: w.custom.title, text: w.custom.text, modules: [...w.custom.modules], size: { ...w.custom.size } })
+  }
+
+  const save = () => {
+    if (!form.title.trim()) return
+    const clean: CustomWidgetSpec = {
+      title: form.title.trim(),
+      text: form.text.trim(),
+      modules: form.modules.length ? form.modules : ['clock'],
+      size: { width: Math.max(200, form.size.width || 320), height: Math.max(140, form.size.height || 260) }
+    }
+    if (editingId === '__new__') {
+      dispatch({ type: 'ADD_CUSTOM_WIDGET', payload: clean })
+    } else if (editingId) {
+      dispatch({ type: 'UPDATE_CUSTOM_WIDGET', payload: { id: editingId, changes: clean } })
+    }
+    setEditingId(null)
+  }
+
+  const remove = (id: string) => {
+    if (confirm('Удалить этот виджет?')) {
+      dispatch({ type: 'REMOVE_CUSTOM_WIDGET', payload: id })
+      if (editingId === id) setEditingId(null)
+    }
+  }
+
+  const toggleModule = (m: CustomModuleId) => {
+    setForm(f => ({ ...f, modules: f.modules.includes(m) ? f.modules.filter(x => x !== m) : [...f.modules, m] }))
+  }
+
+  const presetSize = (id: string) => {
+    const p = SIZE_PRESETS.find(x => x.id === id)
+    if (!p) return
+    if (p.id === 'custom') return
+    setForm(f => ({ ...f, size: p.size }))
+  }
+
+  const isPreset = (size: { width: number; height: number }) =>
+    SIZE_PRESETS.find(p => p.id !== 'custom' && p.size.width === size.width && p.size.height === size.height)?.id
+
+  return (
+    <div className="tab-scroll">
+      <h3 className="sec-title">Ваши виджеты</h3>
+      <p className="sec-sub">Соберите виджет из модулей Quik: часы, погода, крипта, музыка, карты — и добавьте свой текст.</p>
+
+      {customWidgets.length === 0 && !editingId && (
+        <div className="cw-empty">
+          <span className="cw-empty-ic">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="3" y="3" width="18" height="18" rx="6" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+          </span>
+          <span>Пока нет своих виджетов</span>
+        </div>
+      )}
+
+      <div className="cw-list">
+        {customWidgets.map(w => (
+          <div key={w.id} className="cw-row">
+            <span className="cw-row-title" title={w.custom.title}>{w.custom.title || 'Без названия'}</span>
+            <span className="cw-row-size">{w.custom.size.width}×{w.custom.size.height}</span>
+            <div className={`switch ${w.enabled ? 'on' : ''}`} onClick={() => dispatch({ type: 'TOGGLE_WIDGET', payload: w.id })} />
+            <button className="icon-btn" onClick={() => startEdit(w)} title="Редактировать">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+              </svg>
+            </button>
+            <button className="icon-btn" onClick={() => remove(w.id)} title="Удалить">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {editingId ? (
+        <div className="cw-editor">
+          <h3 className="sec-title">{editingId === '__new__' ? 'Новый виджет' : 'Редактирование'}</h3>
+
+          <div className="field">
+            <span className="cw-label">Название</span>
+            <input className="cw-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Мой виджет" />
+          </div>
+
+          <div className="field">
+            <span className="cw-label">Размер</span>
+            <div className="bg-fit-row cw-size-row">
+              {SIZE_PRESETS.map(p => (
+                <button
+                  key={p.id}
+                  className={`bg-fit ${p.id === 'custom' ? (isPreset(form.size) ? '' : 'active') : isPreset(form.size) === p.id ? 'active' : ''}`}
+                  onClick={() => presetSize(p.id)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="cw-size-fields">
+              <input className="cw-input" type="number" min={200} value={form.size.width} onChange={e => setForm(f => ({ ...f, size: { width: Number(e.target.value) || 320, height: f.size.height } }))} />
+              <span className="cw-size-x">×</span>
+              <input className="cw-input" type="number" min={140} value={form.size.height} onChange={e => setForm(f => ({ ...f, size: { width: f.size.width, height: Number(e.target.value) || 260 } }))} />
+            </div>
+          </div>
+
+          <div className="field">
+            <span className="cw-label">Текст</span>
+            <textarea
+              className="cw-textarea"
+              value={form.text}
+              onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
+              placeholder="Можно написать что угодно — заметка, цитата, список дел…"
+              rows={3}
+            />
+          </div>
+
+          <div className="field">
+            <span className="cw-label">Модули внутри виджета</span>
+            <div className="cw-mods">
+              {MODULE_OPTIONS.map(m => (
+                <button key={m.id} className={`cw-mod ${form.modules.includes(m.id) ? 'active' : ''}`} onClick={() => toggleModule(m.id)}>
+                  {form.modules.includes(m.id) && (
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="3">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  )}
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="cw-editor-actions">
+            <button className="btn btn-ghost" onClick={() => setEditingId(null)}>Отмена</button>
+            <button className="btn btn-primary" onClick={save}>Сохранить</button>
+          </div>
+        </div>
+      ) : (
+        <button className="btn btn-primary cw-create" onClick={startNew}>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Создать свой виджет
+        </button>
+      )}
+    </div>
+  )
+}
+
 function WidgetsTab() {
   const { settings, dispatch } = useStore()
 
@@ -125,7 +344,7 @@ function WidgetsTab() {
       <h3 className="sec-title">Виджеты на столе</h3>
       <div className="wlist">
         {settings.widgets.map(w => (
-          <SettingRow key={w.id} label={WIDGET_NAME[w.type]} hint="Показано на рабочем столе">
+          <SettingRow key={w.id} label={w.type === 'custom' && w.custom ? w.custom.title : WIDGET_NAME[w.type] || w.type} hint="Показано на рабочем столе">
             <div className={`switch ${w.enabled ? 'on' : ''}`} onClick={() => dispatch({ type: 'TOGGLE_WIDGET', payload: w.id })} />
           </SettingRow>
         ))}
@@ -281,9 +500,17 @@ function AboutTab() {
       <div className="about-facts">
         <div className="about-fact"><span>User</span><b>{name}</b></div>
         <div className="about-fact"><span>Версия</span><b>{version}</b></div>
-        <div className="about-fact"><span>Виджеты</span><b>{settings.widgets.filter(w => w.enabled).length} из 5</b></div>
+        <div className="about-fact"><span>Виджеты</span><b>{settings.widgets.filter(w => w.enabled).length} из {settings.widgets.length}</b></div>
         <div className="about-fact"><span>Горячие клавиши</span><b>Ctrl+Shift+Tab</b></div>
       </div>
+
+      <button className="btn btn-primary about-update-btn" onClick={() => window.quik?.updateCheck()}>
+        <svg className="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 12a9 9 0 1 1-9-9" strokeLinecap="round" />
+          <path d="M12 6v6l3.5 2" strokeLinecap="round" />
+        </svg>
+        Проверить обновления
+      </button>
     </div>
   )
 }
@@ -357,4 +584,10 @@ function GearIcon() {
 }
 function InfoIcon() {
   return <svg className="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+}
+function ImageIcon() {
+  return <svg className="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="9" cy="9" r="1.6" /><path d="M21 15l-5-5L5 21" /></svg>
+}
+function WandIcon() {
+  return <svg className="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M15 4V2M15 22v-2M8 9L2 5l10 2 10-2-6 4M2 12l3 3M22 12l-3 3M8 19h14M4 8v4" /><path d="M5 12l4-4M15 12l4-4" strokeLinecap="round" /></svg>
 }

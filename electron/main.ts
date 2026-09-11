@@ -4,7 +4,8 @@ import { spawn, ChildProcess } from 'child_process'
 import path from 'path'
 import * as emb from './nativeEmb'
 import { startMediaDaemon, stopMediaDaemon, readMediaSnapshot } from './media'
-import type { MediaSnapshot } from '../src/types'
+import { initUpdater, checkForUpdates, downloadUpdate, getUpdateState } from './updater'
+import type { UpdateState } from '../src/types'
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 
@@ -40,6 +41,10 @@ let overlayWindow: BrowserWindow | null = null
 let isOverlayVisible = false
 let pendingPanel: string | null = null
 let tray: Tray | null = null
+let wallpaperWindow: BrowserWindow | null = null
+let wallpaperHwnd: emb.NativeHwnd | null = null
+let wallpaperEmbedded = false
+let lastWallpaperKey = ''
 
 interface EmbeddedApp {
   id: string
@@ -119,7 +124,7 @@ function computeBounds(slot: WidgetSlot, index: number): WidgetState {
 
   let y = area.y + topPad
   for (let i = 0; i < index; i++) {
-    const prev = WIDGET_SLOTS[i]
+    const prev = WIDGET_SLOTS[i] || { type: slot.type, defaultSize: slot.defaultSize }
     y += (widgetState[prev.type]?.height ?? prev.defaultSize.height) + gap
   }
 
@@ -171,6 +176,166 @@ function createWidgetWindow(slot: WidgetSlot, index: number): void {
   win.on('closed', () => {
     widgetWindows.delete(slot.type)
   })
+}
+
+function createWallpaperWindow(): void {
+  if (wallpaperWindow) return
+  const bounds = screen.getPrimaryDisplay().bounds
+  const area = screen.getPrimaryDisplay().workArea
+
+  wallpaperWindow = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    frame: false,
+    transparent: false,
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: false,
+    focusable: false,
+    roundedCorners: false,
+    backgroundColor: '#000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+      backgroundThrottling: false
+    }
+  })
+
+  wallpaperWindow.setAlwaysOnTop(false)
+  wallpaperWindow.setIgnoreMouseEvents(true, { forward: true })
+  wallpaperWindow.setVisibleOnAllWorkspaces(true)
+  loadRoute(wallpaperWindow, 'wallpaper')
+
+  wallpaperWindow.webContents.on('did-finish-load', () => {
+    if (!wallpaperWindow) return
+    const hwnd = wallpaperWindow.getNativeWindowHandle()
+    wallpaperHwnd = hwnd
+    wallpaperEmbedded = false
+    setTimeout(() => {
+      if (wallpaperWindow && wallpaperHwnd) {
+        try {
+          wallpaperEmbedded = emb.embedIntoDesktop(wallpaperHwnd)
+          if (wallpaperEmbedded) emb.layoutToDesktop(wallpaperHwnd)
+        } catch {
+          wallpaperEmbedded = false
+        }
+      }
+      wallpaperWindow?.setBounds(area)
+      wallpaperWindow?.showInactive()
+    }, 400)
+  })
+
+  wallpaperWindow.on('closed', () => {
+    wallpaperWindow = null
+    wallpaperHwnd = null
+    wallpaperEmbedded = false
+  })
+}
+
+function destroyWallpaperWindow(): void {
+  if (wallpaperWindow) {
+    try { wallpaperWindow.destroy() } catch {}
+    wallpaperWindow = null
+  }
+  wallpaperHwnd = null
+  wallpaperEmbedded = false
+}
+
+function syncWallpaper(bg: { type: string; value?: string; opacity?: number; fit?: string } | null | undefined): void {
+  const key = JSON.stringify({ t: bg?.type, v: bg?.value, o: bg?.opacity, f: bg?.fit })
+
+  if (!bg || bg.type === 'none' || !bg.value) {
+    if (key !== lastWallpaperKey) destroyWallpaperWindow()
+    lastWallpaperKey = key
+    return
+  }
+
+  const created = !wallpaperWindow || wallpaperWindow.isDestroyed()
+  createWallpaperWindow()
+  if (created) {
+    lastWallpaperKey = key
+    return
+  }
+  if (key === lastWallpaperKey) return
+  lastWallpaperKey = key
+  try {
+    loadRoute(wallpaperWindow!, 'wallpaper')
+  } catch {}
+}
+
+function createCustomWidgetWindow(id: string, width: number, height: number, index: number): void {
+  if (widgetWindows.has(id)) return
+
+  const slot: WidgetSlot = { type: id, defaultSize: { width, height } }
+  const bounds = computeBounds(slot, index)
+
+  const win = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: false,
+    roundedCorners: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      spellcheck: false,
+      backgroundThrottling: true
+    }
+  })
+
+  win.setAlwaysOnTop(false)
+  widgetWindows.set(id, win)
+  loadRoute(win, `widget/${id}`)
+
+  win.on('closed', () => {
+    widgetWindows.delete(id)
+  })
+}
+
+function syncCustomWidgets(list: { id: string; width: number; height: number }[]): void {
+  const current = new Set(list.map(x => x.id))
+  for (const [id, win] of widgetWindows) {
+    if (win.isDestroyed() || win === overlayWindow || win === wallpaperWindow) continue
+    if (id.startsWith('custom-') && !current.has(id)) {
+      try { win.destroy() } catch {}
+    }
+  }
+  list.forEach((x, i) => {
+    const existing = widgetWindows.get(x.id)
+    if (existing && !existing.isDestroyed()) {
+      const [w, h] = existing.getSize()
+      if (w !== x.width || h !== x.height) {
+        existing.setSize(x.width, x.height)
+        widgetState[x.id] = { ...widgetState[x.id], width: x.width, height: x.height }
+      }
+      return
+    }
+    createCustomWidgetWindow(x.id, x.width, x.height, i)
+  })
+  saveState()
 }
 
 function createOverlayWindow(): void {
@@ -329,6 +494,28 @@ app.whenReady().then(() => {
   startMediaDaemon(embedLog)
 
   globalShortcut.register('CommandOrControl+Shift+Tab', toggleOverlay)
+
+  let changelogOpened = false
+  initUpdater({
+    broadcast: (s: UpdateState) => {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('updater-state', s)
+      }
+      if (s.phase === 'changelog' && !changelogOpened) {
+        changelogOpened = true
+        setTimeout(() => showOverlay(null), 900)
+      }
+    },
+    openOverlay: () => showOverlay(null)
+  })
+
+  ipcMain.handle('update-check', checkForUpdates)
+  ipcMain.handle('update-download', downloadUpdate)
+  ipcMain.handle('update-get-state', getUpdateState)
+
+  if (app.isPackaged) {
+    setTimeout(() => checkForUpdates(), 5000)
+  }
 
   ipcMain.on('open-overlay', (_e, panel?: string) => {
     showOverlay(panel || null)
@@ -544,6 +731,31 @@ app.whenReady().then(() => {
     return result.filePaths[0]
   })
 
+  ipcMain.handle('pick-media', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      title: 'Выберите изображение или видео',
+      filters: [
+        { name: 'Изображения', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'] },
+        { name: 'Видео', extensions: ['mp4', 'webm', 'mkv', 'mov', 'avi', 'm4v', 'gif'] },
+        { name: 'Все файлы', extensions: ['*'] }
+      ]
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
+  ipcMain.on('set-wallpaper', (_e, bg: { type: string; value?: string; opacity?: number; fit?: string }) => {
+    syncWallpaper(bg)
+    if (wallpaperWindow && bg && bg.type !== 'none' && bg.value) {
+      wallpaperWindow.setIgnoreMouseEvents(true, { forward: true })
+    }
+  })
+
+  ipcMain.on('sync-custom-widgets', (_e, list: { id: string; width: number; height: number }[]) => {
+    syncCustomWidgets(list || [])
+  })
+
   ipcMain.handle('get-autostart', () => {
     return app.getLoginItemSettings().openAtLogin
   })
@@ -554,6 +766,18 @@ app.whenReady().then(() => {
   })
 
   setInterval(() => {
+    if (wallpaperWindow && !wallpaperWindow.isDestroyed()) {
+      if (wallpaperHwnd && emb.alive(wallpaperHwnd)) {
+        if (!wallpaperEmbedded) {
+          try {
+            wallpaperEmbedded = emb.embedIntoDesktop(wallpaperHwnd)
+          } catch {
+            wallpaperEmbedded = false
+          }
+        }
+        if (wallpaperEmbedded) emb.layoutToDesktop(wallpaperHwnd)
+      }
+    }
     if (embeddedApps.size === 0) return
     if (!overlayWindow || overlayWindow.isDestroyed()) return
     const parentBuf = overlayWindow.getNativeWindowHandle()

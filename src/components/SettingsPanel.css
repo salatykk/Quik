@@ -494,3 +494,223 @@
   font-family: var(--font-display);
   letter-spacing: 0.02em;
 }
+
+.about-update-btn {
+  margin-top: 18px;
+}
+
+/* ---------- Background tab ---------- */
+
+.bg-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+
+.wbg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wbg-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wbg-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wbg-item-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.wbg-item-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---------- Custom widgets tab ---------- */
+
+.cw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px;
+  color: var(--soft);
+  font-size: 13px;
+}
+
+.cw-empty-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.cw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.cw-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+
+.cw-row-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-row-size {
+  font-size: 10.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.cw-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cw-editor {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cw-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--soft);
+}
+
+.cw-input {
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+}
+
+.cw-input:focus {
+  border-color: var(--accent-border);
+}
+
+.cw-size-row {
+  gap: 6px;
+}
+
+.cw-size-fields {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.cw-size-x {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.cw-textarea {
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 48px;
+}
+
+.cw-textarea:focus {
+  border-color: var(--accent-border);
+}
+
+.cw-mods {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cw-mod {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--motion);
+}
+
+.cw-mod:hover {
+  border-color: var(--accent-border);
+  color: var(--text);
+}
+
+.cw-mod.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.cw-editor-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}

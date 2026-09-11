@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
-import { AppSettings, Theme, WidgetConfig, QuikAccount, QuickAccessApp, WeatherCity, CryptoCoin } from './types'
+import { AppSettings, Theme, WidgetConfig, QuikAccount, QuickAccessApp, WeatherCity, CryptoCoin, WidgetBackground, CustomWidgetSpec } from './types'
 
 const STORAGE_KEY = 'quik-settings'
 
@@ -97,7 +97,8 @@ function getDefaultSettings(): AppSettings {
     isFirstLaunch: true,
     widgetScale: 1,
     animationSpeed: 1,
-    reducedMotion: false
+    reducedMotion: false,
+    wallpaper: { type: 'none', opacity: 1, fit: 'cover' }
   }
 }
 
@@ -128,6 +129,10 @@ export type Action =
   | { type: 'SET_RADIUS'; payload: number }
   | { type: 'UPDATE_WIDGET'; payload: { id: string; changes: Partial<WidgetConfig> } }
   | { type: 'TOGGLE_WIDGET'; payload: string }
+  | { type: 'SET_WALLPAPER'; payload: WidgetBackground }
+  | { type: 'ADD_CUSTOM_WIDGET'; payload: CustomWidgetSpec }
+  | { type: 'UPDATE_CUSTOM_WIDGET'; payload: { id: string; changes: Partial<CustomWidgetSpec> } }
+  | { type: 'REMOVE_CUSTOM_WIDGET'; payload: string }
   | { type: 'SET_QUICK_ACCESS_APPS'; payload: QuickAccessApp[] }
   | { type: 'ADD_QUICK_ACCESS_APP'; payload: QuickAccessApp }
   | { type: 'REMOVE_QUICK_ACCESS_APP'; payload: string }
@@ -178,6 +183,42 @@ function reducer(state: AppSettings, action: Action): AppSettings {
         ...state,
         widgets: state.widgets.map(w => (w.id === action.payload ? { ...w, enabled: !w.enabled } : w))
       }
+      break
+    case 'SET_WALLPAPER':
+      next = { ...state, wallpaper: action.payload }
+      break
+    case 'ADD_CUSTOM_WIDGET': {
+      const id = `custom-${Date.now()}`
+      const widget: WidgetConfig = {
+        id,
+        type: 'custom',
+        enabled: true,
+        position: { x: 0, y: 0 },
+        size: { width: action.payload.size.width, height: action.payload.size.height },
+        opacity: 1,
+        custom: action.payload
+      }
+      next = { ...state, widgets: [...state.widgets, widget] }
+      break
+    }
+    case 'UPDATE_CUSTOM_WIDGET': {
+      const spec = action.payload.changes
+      next = {
+        ...state,
+        widgets: state.widgets.map(w => {
+          if (w.id !== action.payload.id || !w.custom) return w
+          const merged = { ...w.custom, ...spec }
+          return {
+            ...w,
+            custom: merged,
+            size: { width: merged.size.width, height: merged.size.height }
+          }
+        })
+      }
+      break
+    }
+    case 'REMOVE_CUSTOM_WIDGET':
+      next = { ...state, widgets: state.widgets.filter(w => w.id !== action.payload) }
       break
     case 'SET_QUICK_ACCESS_APPS':
       next = { ...state, quickAccessApps: action.payload }

@@ -12,6 +12,12 @@ const MoveWindow = user32.func('__stdcall', 'MoveWindow', 'int', [H, 'int', 'int
 const ShowWindow = user32.func('__stdcall', 'ShowWindow', 'int', [H, 'int'])
 const IsWindowVisible = user32.func('__stdcall', 'IsWindowVisible', 'int', [H])
 const GetWindowLongPtrW = user32.func('__stdcall', 'GetWindowLongPtrW', 'int64', [H, 'int'])
+const GetClassNameW = user32.func('__stdcall', 'GetClassNameW', 'int', [H, 'void *', 'int'])
+const FindWindowW = user32.func('__stdcall', 'FindWindowW', H, ['str16', 'str16'])
+const FindWindowExW = user32.func('__stdcall', 'FindWindowExW', H, [H, H, 'str16', 'str16'])
+const SendMessageW = user32.func('__stdcall', 'SendMessageW', 'intptr', [H, 'uint32', 'intptr', 'intptr'])
+const GetWindowRect = user32.func('__stdcall', 'GetWindowRect', 'int', [H, 'void *'])
+const GetClientRect = user32.func('__stdcall', 'GetClientRect', 'int', [H, 'void *'])
 const EnumWindowsProc = koffi.proto('EnumWindowsProc', 'int', [H, 'intptr'])
 const EnumWindows = user32.func('__stdcall', 'EnumWindows', 'int', [koffi.pointer(EnumWindowsProc), 'intptr'])
 const ker = koffi.load('kernel32.dll')
@@ -145,6 +151,86 @@ export function isChild(hwnd: NativeHwnd): boolean {
   try {
     const style = Number(GetWindowLongPtrW(hwnd, GWL_STYLE))
     return (style & WS_CHILD) !== 0
+  } catch {
+    return false
+  }
+}
+
+const HWND_BOTTOM = -1 as unknown as NativeHwnd
+
+function className(hwnd: NativeHwnd): string | null {
+  try {
+    const buf = Buffer.alloc(256)
+    const n = GetClassNameW(hwnd, buf, 256)
+    if (n <= 0) return null
+    let s = ''
+    for (let i = 0; i < n; i++) s += String.fromCharCode(buf.readUInt16LE(i * 2))
+    return s
+  } catch {
+    return null
+  }
+}
+
+export function sendToBottom(hwnd: NativeHwnd): boolean {
+  try {
+    const buf = koffi.alloc('int32', 4)
+    GetWindowRect(hwnd, buf)
+    const r = { x: 0, y: 0, w: 0, h: 0 }
+    r.x = Number(koffi.decode(buf, 'int32', 0))
+    r.y = Number(koffi.decode(buf, 'int32', 1))
+    r.w = Math.max(1, Number(koffi.decode(buf, 'int32', 2)) - r.x)
+    r.h = Math.max(1, Number(koffi.decode(buf, 'int32', 3)) - r.y)
+    SetWindowPos(hwnd, HWND_BOTTOM, r.x, r.y, r.w, r.h, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Find the desktop WorkerW window that owns the icon list (SHELLDLL_DefView). */
+export function findDesktopWorkerW(): NativeHwnd | null {
+  try {
+    const progman = FindWindowW('Progman', null)
+    if (!progman) return null
+    SendMessageW(progman, 0x052c, 0, 0)
+    const list = enumerateTopWindows()
+    for (const hwnd of list) {
+      if (className(hwnd) !== 'WorkerW') continue
+      const defView = FindWindowExW(hwnd, null, 'SHELLDLL_DefView', null)
+      if (defView) return hwnd
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** Reparent hwnd into the desktop worker (becomes a real wallpaper behind icons). */
+export function embedIntoDesktop(hwnd: NativeHwnd): boolean {
+  const worker = findDesktopWorkerW()
+  if (!worker) return false
+  try {
+    ShowWindow(hwnd, SW_HIDE)
+    SetParent(hwnd, worker)
+    SetWindowPos(hwnd, null, 0, 0, 1, 1, SWP_NOZORDER | SWP_NOACTIVATE)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Move an already-embedded wallpaper to fill the desktop worker area and show it. */
+export function layoutToDesktop(hwnd: NativeHwnd): boolean {
+  try {
+    const worker = findDesktopWorkerW()
+    if (!worker) return false
+    const buf = koffi.alloc('int32', 4)
+    GetClientRect(worker, buf)
+    const w = Math.max(1, Number(koffi.decode(buf, 'int32', 2)))
+    const h = Math.max(1, Number(koffi.decode(buf, 'int32', 3)))
+    MoveWindow(hwnd, 0, 0, w, h, 1)
+    ShowWindow(hwnd, SW_SHOWNOACTIVATE)
+    return true
   } catch {
     return false
   }

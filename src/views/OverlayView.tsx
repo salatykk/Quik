@@ -6,10 +6,14 @@ import WeatherContent from '../components/widgets/WeatherContent'
 import CryptoContent from '../components/widgets/CryptoContent'
 import MusicContent from '../components/widgets/MusicContent'
 import MapsContent from '../components/widgets/MapsContent'
+import CustomWidgetContent from '../components/widgets/CustomWidgetContent'
+import BackgroundLayer from '../components/BackgroundLayer'
 import AccountPanel from '../components/AccountPanel'
 import SettingsPanel from '../components/SettingsPanel'
 import QuickAccessPanel from '../components/QuickAccessPanel'
+import UpdatePanel from '../components/UpdatePanel'
 import { themeVars } from '../themeVars'
+import type { UpdateState } from '../types'
 import './OverlayView.css'
 
 type Panel = null | 'account' | 'settings'
@@ -23,13 +27,50 @@ interface Props {
   version?: string
 }
 
+const DISMISS_KEY = 'quik-update-dismissed'
+const VISIBLE_PHASES = new Set(['checking', 'available', 'downloading', 'downloaded', 'not-available', 'error', 'changelog'])
+
+function dismissKeyFor(s: UpdateState): string {
+  return `${s.phase}:${s.version ?? ''}`
+}
+
 export default function OverlayView({ version = '' }: Props) {
   const { settings } = useStore()
   const theme = settings.theme
   const [panel, setPanel] = useState<Panel>(null)
   const [hosted, setHosted] = useState<HostedApp | null>(null)
   const [ver, setVer] = useState(version)
+  const [update, setUpdate] = useState<UpdateState>({ phase: 'idle' })
+  const [dismissedKey, setDismissedKey] = useState('')
   const vars = themeVars(theme, undefined, 16)
+
+  useEffect(() => {
+    let active = true
+    try {
+      const stored = localStorage.getItem(DISMISS_KEY)
+      if (stored) setDismissedKey(stored)
+    } catch {}
+    const apply = (s: UpdateState) => {
+      if (!active) return
+      setUpdate(s)
+    }
+    window.quik?.getUpdateState().then(apply)
+    const unsub = window.quik?.onUpdateState(apply)
+    return () => {
+      active = false
+      unsub?.()
+    }
+  }, [])
+
+  const showUpdate = VISIBLE_PHASES.has(update.phase) && dismissKeyFor(update) !== dismissedKey
+
+  const dismissUpdate = () => {
+    const key = `${update.phase}:${update.version ?? ''}`
+    setDismissedKey(key)
+    try {
+      localStorage.setItem(DISMISS_KEY, key)
+    } catch {}
+  }
 
   useEffect(() => {
     window.quik?.getAppVersion().then(setVer)
@@ -43,14 +84,15 @@ export default function OverlayView({ version = '' }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (hosted) setHosted(null)
+        if (showUpdate) dismissUpdate()
+        else if (hosted) setHosted(null)
         else if (panel) setPanel(null)
         else window.quik?.closeOverlay()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [panel, hosted])
+  }, [panel, hosted, showUpdate])
 
   const launch = (app: QuickAccessApp) => {
     if (app.url) setHosted({ app, kind: 'web' })
@@ -65,7 +107,14 @@ export default function OverlayView({ version = '' }: Props) {
     <div className="ov" style={vars}>
       <div className="ov-bg" />
 
-      {hosted ? (
+      {showUpdate ? (
+        <div className="modal-wrap" onClick={dismissUpdate}>
+          <div className="modal-fade" onClick={dismissUpdate} />
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <UpdatePanel state={update} onDismiss={dismissUpdate} />
+          </div>
+        </div>
+      ) : hosted ? (
         <AppHost hosted={hosted} onClose={() => setHosted(null)} />
       ) : panel ? (
         <div className="modal-wrap" onClick={() => setPanel(null)}>
@@ -139,12 +188,21 @@ export default function OverlayView({ version = '' }: Props) {
                 <div className="widget-grid">
                   {widgets.map((w, i) => (
                     <div key={w.id} className="widget-cell anim-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                      <div className="card widget-card">
-                        {w.type === 'clock' && <ClockContent />}
-                        {w.type === 'weather' && <WeatherContent />}
-                        {w.type === 'crypto' && <CryptoContent />}
-                        {w.type === 'music' && <MusicContent />}
-                        {w.type === 'maps' && <MapsContent />}
+                      <div className={`card widget-card ${w.background && w.background.type !== 'none' ? 'has-bg' : ''}`}>
+                        {w.background && w.background.type !== 'none' && (
+                          <>
+                            <BackgroundLayer bg={w.background} className="w-card-bg" />
+                            <div className="w-card-dim" />
+                          </>
+                        )}
+                        <div className="w-card-content">
+                          {w.type === 'clock' && <ClockContent />}
+                          {w.type === 'weather' && <WeatherContent />}
+                          {w.type === 'crypto' && <CryptoContent />}
+                          {w.type === 'music' && <MusicContent />}
+                          {w.type === 'maps' && <MapsContent />}
+                          {w.type === 'custom' && w.custom && <CustomWidgetContent spec={w.custom} />}
+                        </div>
                       </div>
                     </div>
                   ))}

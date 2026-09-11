@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { MediaSnapshot } from '../src/types'
+import type { MediaSnapshot, UpdateState, WidgetBackground } from '../src/types'
 
 const api = {
   openOverlay: (panel?: 'settings' | 'account') => ipcRenderer.send('open-overlay', panel),
@@ -38,6 +38,10 @@ const api = {
 
   openApp: (appPath: string) => ipcRenderer.invoke('open-app', appPath),
   pickFile: () => ipcRenderer.invoke('pick-file'),
+  pickMedia: () => ipcRenderer.invoke('pick-media'),
+  setWallpaper: (bg: WidgetBackground) => ipcRenderer.send('set-wallpaper', bg),
+  syncCustomWidgets: (specs: { id: string; width: number; height: number; title: string }[]) =>
+    ipcRenderer.send('sync-custom-widgets', specs.map(s => ({ id: s.id, width: s.width, height: s.height }))),
   getAutostart: () => ipcRenderer.invoke('get-autostart'),
   setAutostart: (enabled: boolean) => ipcRenderer.invoke('set-autostart', enabled),
 
@@ -50,7 +54,16 @@ const api = {
   releaseApp: (id: string) => ipcRenderer.send('release-app', id),
   embedStatus: () => ipcRenderer.invoke('embed-status'),
 
-  getAppVersion: () => ipcRenderer.invoke('get-app-version')
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  updateCheck: () => ipcRenderer.invoke('update-check'),
+  updateDownload: () => ipcRenderer.invoke('update-download'),
+  getUpdateState: () => ipcRenderer.invoke('update-get-state'),
+  onUpdateState: (cb: (state: UpdateState) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, state: UpdateState) => cb(state)
+    ipcRenderer.on('updater-state', handler)
+    return () => ipcRenderer.removeListener('updater-state', handler)
+  }
 }
 
 contextBridge.exposeInMainWorld('quik', api)
